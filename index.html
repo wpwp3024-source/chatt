@@ -16,14 +16,11 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
 .message {max-width:70%; margin:5px 0; padding:10px; border-radius:10px; word-wrap:break-word;}
 .me {background:#dcf8c6; align-self:flex-end;}
 .other {background:#fff; align-self:flex-start;}
-.input-area {display:flex; padding:5px; background:#fff; align-items:center; gap:5px; flex-wrap:wrap;}
+.input-area {display:flex; padding:5px; background:#fff; align-items:center; gap:5px; position:sticky; bottom:0; flex-wrap:nowrap;}
 .input-area input[type=text] {flex:1; padding:10px; border:1px solid #ccc; border-radius:20px;}
 .input-area button {padding:10px; border:none; border-radius:20px; background:#128c7e; color:#fff; cursor:pointer; flex-shrink:0;}
 .message img {max-width:200px; border-radius:8px; margin-top:5px;}
-.message audio {margin-top:5px; width:100%;}
-
-#recordingIndicator {display:none; position:absolute; top:10%; left:50%; transform:translateX(-50%);
-  background:green; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; z-index:10000;}
+.message audio {display:none;}
 </style>
 </head>
 <body>
@@ -38,14 +35,10 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
   </div>
 </div>
 
-<!-- Kaydediliyor göstergesi -->
-<div id="recordingIndicator">🎙️ Ses kaydı yapılıyor... <span id="recordTime">0</span>s</div>
-
 <div class="chat-container" id="chatContainer">
   <div class="messages" id="messages"></div>
   <div class="input-area">
     <input type="text" id="msgInput" placeholder="Mesaj yaz..." />
-    <button id="recordBtn">🎤</button>
     <input type="file" id="photoInput" accept="image/*" style="display:none;">
     <button id="photoBtn">📷</button>
     <button id="sendBtn">Gönder</button>
@@ -54,8 +47,8 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -82,14 +75,10 @@ const chatContainer = document.getElementById("chatContainer");
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
-const recordBtn = document.getElementById("recordBtn");
 const photoBtn = document.getElementById("photoBtn");
 const photoInput = document.getElementById("photoInput");
-const recordingIndicator = document.getElementById("recordingIndicator");
-const recordTimeSpan = document.getElementById("recordTime");
 
 let username = localStorage.getItem("chatUsername") || "";
-let mediaRecorder, audioChunks=[], recordStartTime, recordInterval;
 
 // Modal kontrol
 function showChat(){
@@ -126,51 +115,6 @@ photoInput.addEventListener("change", async e=>{
   photoInput.value="";
 });
 
-// Ses kaydı: bas-tut + süre göstergesi
-async function startRecording(){
-  recordingIndicator.style.display="block";
-  recordStartTime = Date.now();
-  recordTimeSpan.innerText="0";
-  recordInterval = setInterval(()=>{
-    const sec = Math.floor((Date.now()-recordStartTime)/1000);
-    recordTimeSpan.innerText = sec;
-  }, 500);
-
-  const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-  mediaRecorder = new MediaRecorder(stream);
-  audioChunks = [];
-  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-  mediaRecorder.start();
-  recordBtn.textContent="⏹ Kayıt";
-}
-
-async function stopRecording(){
-  if(!mediaRecorder) return;
-  clearInterval(recordInterval);
-  recordingIndicator.style.display="none";
-
-  return new Promise(resolve=>{
-    mediaRecorder.onstop = async ()=>{
-      try{
-        const audioBlob = new Blob(audioChunks,{type:"audio/webm"});
-        const fileRef = ref(storage, `audio/${username}_${Date.now()}.webm`);
-        await uploadBytes(fileRef, audioBlob);
-        const url = await getDownloadURL(fileRef);
-        await addDoc(messagesRef,{user:username,audioURL:url,createdAt:serverTimestamp()});
-        recordBtn.textContent="🎤";
-        resolve();
-      }catch(e){console.error("Ses gönderilemedi:",e); resolve();}
-    };
-    mediaRecorder.stop();
-  });
-}
-
-// Mouse & Touch events
-recordBtn.addEventListener("mousedown", startRecording);
-recordBtn.addEventListener("mouseup", stopRecording);
-recordBtn.addEventListener("touchstart", e=>{ e.preventDefault(); startRecording(); });
-recordBtn.addEventListener("touchend", e=>{ e.preventDefault(); stopRecording(); });
-
 // Realtime mesajları dinle
 onSnapshot(q, snapshot=>{
   messagesDiv.innerHTML="";
@@ -183,12 +127,6 @@ onSnapshot(q, snapshot=>{
       const img = document.createElement("img");
       img.src = msg.imageURL;
       div.appendChild(img);
-    }
-    if(msg.audioURL){
-      const audio = document.createElement("audio");
-      audio.src = msg.audioURL;
-      audio.controls=true;
-      div.appendChild(audio);
     }
     messagesDiv.appendChild(div);
   });
