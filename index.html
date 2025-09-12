@@ -19,10 +19,11 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
 .input-area {display:flex; padding:5px; background:#fff; align-items:center; gap:5px; flex-wrap:wrap;}
 .input-area input[type=text] {flex:1; padding:10px; border:1px solid #ccc; border-radius:20px;}
 .input-area button {padding:10px; border:none; border-radius:20px; background:#128c7e; color:#fff; cursor:pointer; flex-shrink:0;}
-#emojiPicker {display:none; position:absolute; bottom:60px; left:10px; background:#fff; border:1px solid #ccc; padding:5px; border-radius:5px; z-index:1000;}
-#emojiPicker span {font-size:24px; padding:5px; cursor:pointer;}
 .message img {max-width:200px; border-radius:8px; margin-top:5px;}
 .message audio {margin-top:5px; width:100%;}
+
+#recordingIndicator {display:none; position:absolute; top:10%; left:50%; transform:translateX(-50%);
+  background:green; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; z-index:10000;}
 </style>
 </head>
 <body>
@@ -37,18 +38,17 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
   </div>
 </div>
 
+<!-- Kaydediliyor göstergesi -->
+<div id="recordingIndicator">🎙️ Ses kaydı yapılıyor... <span id="recordTime">0</span>s</div>
+
 <div class="chat-container" id="chatContainer">
   <div class="messages" id="messages"></div>
   <div class="input-area">
-    <button id="emojiBtn">😊</button>
     <input type="text" id="msgInput" placeholder="Mesaj yaz..." />
     <button id="recordBtn">🎤</button>
     <input type="file" id="photoInput" accept="image/*" style="display:none;">
     <button id="photoBtn">📷</button>
     <button id="sendBtn">Gönder</button>
-    <div id="emojiPicker">
-      <span>😀</span><span>😂</span><span>😍</span><span>😎</span><span>😢</span><span>👍</span><span>🙏</span>
-    </div>
   </div>
 </div>
 
@@ -82,14 +82,14 @@ const chatContainer = document.getElementById("chatContainer");
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
-const emojiBtn = document.getElementById("emojiBtn");
-const emojiPicker = document.getElementById("emojiPicker");
 const recordBtn = document.getElementById("recordBtn");
 const photoBtn = document.getElementById("photoBtn");
 const photoInput = document.getElementById("photoInput");
+const recordingIndicator = document.getElementById("recordingIndicator");
+const recordTimeSpan = document.getElementById("recordTime");
 
 let username = localStorage.getItem("chatUsername") || "";
-let mediaRecorder, audioChunks=[], recording=false;
+let mediaRecorder, audioChunks=[], recordStartTime, recordInterval;
 
 // Modal kontrol
 function showChat(){
@@ -102,16 +102,6 @@ saveUsernameBtn.addEventListener("click", ()=>{
   const val = usernameInput.value.trim();
   if(val){ username=val; localStorage.setItem("chatUsername", username); showChat(); }
   else alert("Lütfen geçerli bir ad girin.");
-});
-
-// Emoji picker
-emojiBtn.addEventListener("click", ()=>emojiPicker.style.display = emojiPicker.style.display==="none"?"block":"none");
-document.querySelectorAll("#emojiPicker span").forEach(el=>{
-  el.addEventListener("click", ()=>{
-    msgInput.value += el.textContent;
-    emojiPicker.style.display="none";
-    msgInput.focus();
-  });
 });
 
 // Text mesaj gönderme (Enter tuşu dahil)
@@ -136,55 +126,50 @@ photoInput.addEventListener("change", async e=>{
   photoInput.value="";
 });
 
-// Ses kaydı: bas ve bırak ile gönder
-function startRecording(stream){
+// Ses kaydı: bas-tut + süre göstergesi
+async function startRecording(){
+  recordingIndicator.style.display="block";
+  recordStartTime = Date.now();
+  recordTimeSpan.innerText="0";
+  recordInterval = setInterval(()=>{
+    const sec = Math.floor((Date.now()-recordStartTime)/1000);
+    recordTimeSpan.innerText = sec;
+  }, 500);
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
   mediaRecorder = new MediaRecorder(stream);
   audioChunks = [];
   mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
   mediaRecorder.start();
-  recordBtn.textContent = "⏹ Kayıt";
+  recordBtn.textContent="⏹ Kayıt";
 }
 
 async function stopRecording(){
   if(!mediaRecorder) return;
-  mediaRecorder.stop();
-  recordBtn.textContent = "🎤";
-  mediaRecorder.onstop = async ()=>{
-    try{
-      const audioBlob = new Blob(audioChunks,{type:"audio/webm"});
-      const fileRef = ref(storage, `audio/${username}_${Date.now()}.webm`);
-      await uploadBytes(fileRef,audioBlob);
-      const url = await getDownloadURL(fileRef);
-      await addDoc(messagesRef,{user:username, audioURL:url, createdAt:serverTimestamp()});
-      // Son 20 ses kontrolü
-      const snap = await getDocs(query(messagesRef,orderBy("createdAt")));
-      const userAudio = snap.docs.filter(doc=>doc.data().user===username && doc.data().audioURL);
-      if(userAudio.length>20){
-        const oldest = userAudio[0];
-        const path = decodeURIComponent(oldest.data().audioURL.split("/o/")[1].split("?")[0]);
-        const oldRef = ref(storage,path);
-        await deleteObject(oldRef).catch(()=>{});
-        await deleteDoc(oldest.ref);
-      }
-    }catch(e){console.error("Ses gönderilemedi:",e);}
-  };
+  clearInterval(recordInterval);
+  recordingIndicator.style.display="none";
+
+  return new Promise(resolve=>{
+    mediaRecorder.onstop = async ()=>{
+      try{
+        const audioBlob = new Blob(audioChunks,{type:"audio/webm"});
+        const fileRef = ref(storage, `audio/${username}_${Date.now()}.webm`);
+        await uploadBytes(fileRef, audioBlob);
+        const url = await getDownloadURL(fileRef);
+        await addDoc(messagesRef,{user:username,audioURL:url,createdAt:serverTimestamp()});
+        recordBtn.textContent="🎤";
+        resolve();
+      }catch(e){console.error("Ses gönderilemedi:",e); resolve();}
+    };
+    mediaRecorder.stop();
+  });
 }
 
 // Mouse & Touch events
-recordBtn.addEventListener("mousedown", async ()=>{
-  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-  startRecording(stream);
-});
+recordBtn.addEventListener("mousedown", startRecording);
 recordBtn.addEventListener("mouseup", stopRecording);
-recordBtn.addEventListener("touchstart", async e=>{
-  e.preventDefault();
-  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-  startRecording(stream);
-});
-recordBtn.addEventListener("touchend", async e=>{
-  e.preventDefault();
-  await stopRecording();
-});
+recordBtn.addEventListener("touchstart", e=>{ e.preventDefault(); startRecording(); });
+recordBtn.addEventListener("touchend", e=>{ e.preventDefault(); stopRecording(); });
 
 // Realtime mesajları dinle
 onSnapshot(q, snapshot=>{
