@@ -17,6 +17,7 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
 .me {background:#dcf8c6; align-self:flex-end;}
 .other {background:#fff; align-self:flex-start;}
 .message span.time {font-size:0.7em; color:#555; margin-left:5px;}
+.message span.recording {font-size:0.7em; color:red; display:block;}
 
 .input-area {display:flex; padding:5px; background:#fff; align-items:center; gap:5px; position:sticky; bottom:0; flex-wrap:nowrap; z-index:1;}
 .input-area input[type=text] {flex:1; padding:10px; border:1px solid #ccc; border-radius:20px;}
@@ -83,6 +84,7 @@ const photoInput = document.getElementById("photoInput");
 const audioBtn = document.getElementById("audioBtn");
 
 let username = localStorage.getItem("chatUsername") || "";
+let mediaRecorder, audioChunks = [], recordingInterval, recordingTime=0;
 
 // Modal kontrol
 function showChat(){
@@ -119,23 +121,55 @@ photoInput.addEventListener("change", async e=>{
   photoInput.value="";
 });
 
-// Ses kaydı gönderme
-let mediaRecorder, audioChunks=[];
-audioBtn.addEventListener("mousedown", async ()=>{
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  mediaRecorder = new MediaRecorder(stream);
-  audioChunks = [];
-  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-  mediaRecorder.onstop = async ()=>{
-    const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
-    const fileRef = ref(storage, `audio/${username}_${Date.now()}.ogg`);
-    await uploadBytes(fileRef, blob);
-    const url = await getDownloadURL(fileRef);
-    await addDoc(messagesRef, {user:username, audioURL:url, createdAt:serverTimestamp()});
-  };
-  mediaRecorder.start();
-});
-audioBtn.addEventListener("mouseup", ()=>{ if(mediaRecorder) mediaRecorder.stop(); });
+// Ses kaydı fonksiyonları
+function startRecording(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    alert("Tarayıcınız ses kaydını desteklemiyor.");
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream=>{
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async ()=>{
+      const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
+      const fileRef = ref(storage, `audio/${username}_${Date.now()}.ogg`);
+      await uploadBytes(fileRef, blob);
+      const url = await getDownloadURL(fileRef);
+      await addDoc(messagesRef, {user:username, audioURL:url, createdAt:serverTimestamp()});
+      clearInterval(recordingInterval);
+      recordingTime=0;
+    };
+    mediaRecorder.start();
+
+    // Süre göstergesi
+    const recordingMsg = document.createElement("div");
+    recordingMsg.id="recordingMsg";
+    recordingMsg.classList.add("message","me");
+    recordingMsg.innerHTML = "<span class='recording'>Ses kaydediliyor... 0s</span>";
+    messagesDiv.appendChild(recordingMsg);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    recordingInterval = setInterval(()=>{
+      recordingTime++;
+      recordingMsg.querySelector(".recording").innerText = "Ses kaydediliyor... "+recordingTime+"s";
+    },1000);
+  });
+}
+
+function stopRecording(){
+  if(mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  const recMsg = document.getElementById("recordingMsg");
+  if(recMsg) recMsg.remove();
+  clearInterval(recordingInterval);
+  recordingTime=0;
+}
+
+// Desktop ve mobil uyumlu
+audioBtn.addEventListener("mousedown", startRecording);
+audioBtn.addEventListener("mouseup", stopRecording);
+audioBtn.addEventListener("touchstart", startRecording);
+audioBtn.addEventListener("touchend", stopRecording);
 
 // Realtime mesajları dinle
 onSnapshot(q, snapshot=>{
