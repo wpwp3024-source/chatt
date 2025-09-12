@@ -52,6 +52,11 @@ body, html {
   align-items:center;
   gap:5px;
   box-sizing:border-box;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
 }
 
 .input-area input[type=text] {
@@ -153,6 +158,21 @@ body, html {
 #usernameModal .gif-modal-content {
   max-width:300px;
 }
+
+/* Ayarlar modal */
+#settingsModal {
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:10001;
+}
+#settingsModal .gif-modal-content {
+  max-width:300px;
+}
 </style>
 </head>
 <body>
@@ -202,6 +222,18 @@ body, html {
   </div>
 </div>
 
+<!-- Ayarlar modalı -->
+<div id="settingsModal">
+  <div class="gif-modal-content">
+    <h4>Ayarlar</h4>
+    <label>
+      <input type="checkbox" id="notifToggle" checked> Bildirim sesi açık
+    </label>
+    <br><br>
+    <button id="settingsClose">Kapat</button>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
@@ -240,7 +272,12 @@ const usernameModal = document.getElementById("usernameModal");
 const usernameInput = document.getElementById("usernameInput");
 const saveUsernameBtn = document.getElementById("saveUsername");
 
+const settingsModal = document.getElementById("settingsModal");
+const notifToggle = document.getElementById("notifToggle");
+const settingsClose = document.getElementById("settingsClose");
+
 let username = localStorage.getItem("chatUsername") || "";
+let notifEnabled = true; // bildirim sesi
 
 // Modal kontrolü
 if(username){
@@ -276,7 +313,6 @@ const specialGifs = [
   "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azd2ZzFhM2E4cHF2d2Q5MXhmZmwzMWZtY3hqNmEyMDRhcmF0YXFiMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/C23q4oydK7Xva/giphy.gif",
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif"
 ];
-
 
 // Mesaj gönderme
 async function sendText(e){
@@ -363,9 +399,25 @@ onSnapshot(q, snapshot=>{
       messagesDiv.appendChild(div);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-      if(msg.user!==username) msgSound.play();
+      if(msg.user!==username && notifEnabled) msgSound.play();
     }
   });
+});
+
+// 5 kez tıklayınca ayarlar modalı aç
+let clickCount = 0;
+document.body.addEventListener("click", ()=>{
+  clickCount++;
+  if(clickCount >=5){
+    settingsModal.style.display="flex";
+    clickCount=0;
+  }
+});
+settingsClose.addEventListener("click", ()=>settingsModal.style.display="none");
+
+// Bildirim sesi toggle
+notifToggle.addEventListener("change", ()=>{
+  notifEnabled = notifToggle.checked;
 });
 </script>
 </body>
