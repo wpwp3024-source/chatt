@@ -14,7 +14,6 @@ body, html {
   background-size: cover;
 }
 
-/* Kullanıcı adı modal */
 .modal {
   position:fixed;
   top:0; left:0;
@@ -50,7 +49,6 @@ body, html {
   cursor:pointer;
 }
 
-/* Chat alanı */
 .chat-container {
   display:none;
   flex-direction:column;
@@ -112,38 +110,25 @@ body, html {
   border-radius:10px;
   display:none;
   z-index:10000;
-  max-width:90%;
-  width:400px;
-  max-height:70%;
+  max-width:500px;
+}
+.gif-modal h4 {margin-top:0; text-align:center;}
+.gif-modal .gif-grid {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+  max-height:300px;
   overflow-y:auto;
 }
-.gif-modal-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
-.gif-close {
-  cursor:pointer;
-  font-size:24px;
-  font-weight:bold;
-}
-.gif-grid {
-  display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap:10px;
-  justify-items:center;
-}
-.gif-grid img {
+.gif-modal .gif-grid img {
   width:80px;
   height:80px;
   cursor:pointer;
   border-radius:8px;
   object-fit:cover;
 }
-@media(max-width:500px){
-  .gif-grid img { width:60px; height:60px; }
-}
+.gif-modal button {margin-top:10px;}
 </style>
 </head>
 <body>
@@ -158,23 +143,30 @@ body, html {
   </div>
 </div>
 
-<!-- Chat container -->
 <div class="chat-container" id="chatContainer">
   <div class="messages" id="messages"></div>
   <div class="input-area">
     <input type="text" id="msgInput" placeholder="Mesaj yaz..." />
     <button id="sendBtn">Gönder</button>
-    <button id="gifBtn">GIF</button>
+    <button id="funGifBtn">Eğlenceli GIF</button>
+    <button id="specialBtn">Özel GIF</button>
   </div>
 </div>
 
-<!-- GIF modal -->
+<!-- GIF seçme modal -->
 <div id="gifModal" class="gif-modal">
-  <div class="gif-modal-header">
-    <h4>Bir GIF seç</h4>
-    <span id="gifClose" class="gif-close">&times;</span>
-  </div>
+  <h4>GIF Seç</h4>
   <div class="gif-grid" id="gifGrid"></div>
+  <button id="gifCloseBtn">Kapat</button>
+</div>
+
+<!-- Özel GIF şifre modal -->
+<div id="specialPassModal" class="gif-modal">
+  <h4>Özel GIF Şifresi</h4>
+  <input type="text" id="specialPassInput" placeholder="Şifreyi gir">
+  <br>
+  <button id="specialPassBtn">Onayla</button>
+  <button id="specialPassClose">Kapat</button>
 </div>
 
 <script type="module">
@@ -205,14 +197,40 @@ const chatContainer = document.getElementById("chatContainer");
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
-const gifBtn = document.getElementById("gifBtn");
+
 const gifModal = document.getElementById("gifModal");
 const gifGrid = document.getElementById("gifGrid");
-const gifClose = document.getElementById("gifClose");
+const gifCloseBtn = document.getElementById("gifCloseBtn");
+
+const funGifBtn = document.getElementById("funGifBtn");
+const specialBtn = document.getElementById("specialBtn");
+const specialPassModal = document.getElementById("specialPassModal");
+const specialPassInput = document.getElementById("specialPassInput");
+const specialPassBtn = document.getElementById("specialPassBtn");
+const specialPassClose = document.getElementById("specialPassClose");
 
 let username = localStorage.getItem("chatUsername") || "";
 
-// Modal kontrol
+// GIF listeleri
+const specialGifs = [
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/veAy5UOhBdS3C/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/of7ly2wRNo6Kk/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2V4cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZqihO0jGDKc8SJYmRB/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm1hZjdwYTFraDNpYzEwZXVva3owYjlkYmpnMmlnbzl2OWFodGwxeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vVzfZLROJZ2LK/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExazd2ZzFhM2E4cHF2d2Q5MXhmZmwzMWZtY3hqNmEyMDRhcmF0YXFiMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/C23q4oydK7Xva/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif"
+];
+
+const funGifs = [
+"https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif","https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+"https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif","https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
+"https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif","https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif",
+"https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif","https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif",
+"https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif","https://media.giphy.com/media/l1J9EdzfOSgfyueLm/giphy.gif"
+]; // 50 örnek ile tamamlayabilirsin
+
+// Kullanıcı adı modal
 function showChat(){
   usernameModal.style.display="none";
   chatContainer.style.display="flex";
@@ -225,68 +243,100 @@ saveUsernameBtn.addEventListener("click", ()=>{
   else alert("Lütfen geçerli bir ad girin.");
 });
 
-// Text mesaj gönderme
+// Mesaj gönderme
 async function sendText(e){
   if(e) e.preventDefault();
   const text = msgInput.value.trim();
   if(!text) return;
-  await addDoc(messagesRef, {text, user:username, createdAt:serverTimestamp()});
+  await addDoc(messagesRef,{text,user:username,createdAt:serverTimestamp()});
   msgInput.value="";
 }
 sendBtn.addEventListener("click", sendText);
-msgInput.addEventListener("keydown", e=>{ if(e.key === "Enter") sendText(e); });
+msgInput.addEventListener("keydown", e=>{ if(e.key==="Enter") sendText(e); });
 
-// GIF listesi
-const gifList = [
-  "https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif",
-  "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
-  "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
-  "https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
-  "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif",
-  "https://media.giphy.com/media/3o6ZtpxSZbQRRnwCKQ/giphy.gif",
-  "https://media.giphy.com/media/3oEjHGrVGrqgFFknfO/giphy.gif",
-  "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif",
-  "https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif",
-  "https://media.giphy.com/media/3oKIPwoeGErMmaI43C/giphy.gif"
-];
-
-// GIF butonuna tıklandığında modal açılır
-gifBtn.addEventListener("click", ()=>{
-  gifGrid.innerHTML = "";
-  gifList.forEach(url=>{
-    const img = document.createElement("img");
-    img.src = url;
+// Eğlenceli GIF modal aç
+funGifBtn.addEventListener("click", ()=>{
+  gifGrid.innerHTML="";
+  funGifs.forEach(url=>{
+    const img=document.createElement("img");
+    img.src=url;
     img.addEventListener("click", async ()=>{
-      await addDoc(messagesRef, {user:username, gifURL:url, createdAt:serverTimestamp()});
-      gifModal.style.display = "none";
+      await addDoc(messagesRef,{user:username,gifURL:url,createdAt:serverTimestamp()});
+      gifModal.style.display="none";
     });
     gifGrid.appendChild(img);
   });
-  gifModal.style.display = "block";
+  gifModal.style.display="block";
 });
 
-// Çarpı butonu ile GIF modal kapatma
-gifClose.addEventListener("click", ()=>{
-  gifModal.style.display = "none";
+// Özel GIF şifre modal
+specialBtn.addEventListener("click", ()=>{
+  specialPassInput.value="";
+  specialPassModal.style.display="block";
 });
 
-// Realtime mesajları dinle
+// Özel GIF şifre kontrolü
+specialPassBtn.addEventListener("click", ()=>{
+  const now=new Date();
+  const hour=now.getHours().toString().padStart(2,'0');
+  const min=now.getMinutes().toString().padStart(2,'0');
+  const currentPassword = hour+min;
+
+  if(specialPassInput.value === currentPassword){
+    gifGrid.innerHTML="";
+    specialGifs.forEach(url=>{
+      const img=document.createElement("img");
+      img.src=url;
+      img.addEventListener("click", async ()=>{
+        await addDoc(messagesRef,{user:username,gifURL:url,createdAt:serverTimestamp()});
+        specialPassModal.style.display = "none";
+      });
+      gifGrid.appendChild(img);
+    });
+    gifModal.style.display="block";
+    specialPassModal.style.display="none";
+  } else alert("Yanlış şifre!");
+});
+
+specialPassClose.addEventListener("click", ()=>specialPassModal.style.display="none");
+
+// GIF modal kapatma
+gifCloseBtn.addEventListener("click", ()=>gifModal.style.display="none");
+
+// WhatsApp tarzı kısa ping sesi
+const msgSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+
+// Önceki mesajları takip etmek için
+let displayedMessages = new Set();
+
 onSnapshot(q, snapshot=>{
-  messagesDiv.innerHTML="";
-  snapshot.forEach(doc=>{
-    const msg = doc.data();
-    const div = document.createElement("div");
-    div.classList.add("message", msg.user===username?"me":"other");
-    if(msg.text) div.innerText = msg.user+": "+msg.text;
-    if(msg.gifURL){
-      const img = document.createElement("img");
-      img.src = msg.gifURL;
-      div.appendChild(img);
+  snapshot.docChanges().forEach(change => {
+    if(change.type === "added"){ // yeni mesaj eklendiğinde
+      const msg = change.doc.data();
+      const msgId = change.doc.id;
+
+      // Daha önce eklenen mesajı tekrar ekleme
+      if(displayedMessages.has(msgId)) return;
+      displayedMessages.add(msgId);
+
+      const div = document.createElement("div");
+      div.classList.add("message", msg.user===username?"me":"other");
+
+      if(msg.text) div.innerText = msg.user + ": " + msg.text;
+      if(msg.gifURL){
+        const img = document.createElement("img");
+        img.src = msg.gifURL;
+        div.appendChild(img);
+      }
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      // sadece diğer kullanıcı mesajında ses çal
+      if(msg.user !== username) msgSound.play();
     }
-    messagesDiv.appendChild(div);
   });
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 });
+
 </script>
 </body>
 </html>
