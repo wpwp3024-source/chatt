@@ -14,7 +14,7 @@ body, html {
   background-size: cover;
 }
 
-.modal {
+.modal, .gif-modal {
   position:fixed;
   top:0; left:0;
   width:100%; height:100%;
@@ -24,22 +24,25 @@ body, html {
   justify-content:center;
   z-index:9999;
 }
-.modal-content {
+
+.modal-content, .gif-modal-content {
   background:#fff;
   padding:20px;
   border-radius:10px;
   text-align:center;
-  width:80%;
+  width:90%;
   max-width:350px;
 }
-.modal input {
+
+.modal input, .gif-modal input {
   width:80%;
   padding:10px;
   margin-top:10px;
   border-radius:5px;
   border:1px solid #ccc;
 }
-.modal button {
+
+.modal button, .gif-modal button {
   margin-top:10px;
   padding:10px 20px;
   border:none;
@@ -54,13 +57,16 @@ body, html {
   flex-direction:column;
   height:100vh;
 }
+
 .messages {
   flex:1;
   overflow-y:auto;
   padding:10px;
   display:flex;
   flex-direction:column;
+  margin-bottom:60px; /* input alanı için boşluk */
 }
+
 .message {
   max-width:70%;
   margin:5px 0;
@@ -68,28 +74,35 @@ body, html {
   border-radius:10px;
   word-wrap:break-word;
 }
+
 .me {background:#dcf8c6; align-self:flex-end;}
 .other {background:#fff; align-self:flex-start;}
+
 .message img {
   max-width:200px;
   border-radius:8px;
   margin-top:5px;
 }
+
 .input-area {
   display:flex;
   padding:5px;
   background:#fff;
   align-items:center;
   gap:5px;
-  position:sticky;
+  position:fixed;
   bottom:0;
+  width:100%;
+  box-sizing:border-box;
 }
+
 .input-area input[type=text] {
   flex:1;
   padding:10px;
   border:1px solid #ccc;
   border-radius:20px;
 }
+
 .input-area button {
   padding:10px;
   border:none;
@@ -103,32 +116,39 @@ body, html {
 /* GIF modal */
 .gif-modal {
   position:fixed;
-  top:50%; left:50%;
-  transform:translate(-50%, -50%);
-  background:#fff;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:10000;
+}
+
+.gif-modal .gif-modal-content {
+  width:90%;
+  max-width:500px;
+  max-height:80%;
+  overflow:auto;
   padding:15px;
   border-radius:10px;
-  display:none;
-  z-index:10000;
-  max-width:500px;
+  background:#fff;
 }
+
 .gif-modal h4 {margin-top:0; text-align:center;}
-.gif-modal .gif-grid {
+.gif-grid {
   display:flex;
   flex-wrap:wrap;
   gap:10px;
   justify-content:center;
-  max-height:300px;
-  overflow-y:auto;
 }
-.gif-modal .gif-grid img {
+.gif-grid img {
   width:80px;
   height:80px;
   cursor:pointer;
   border-radius:8px;
   object-fit:cover;
 }
-.gif-modal button {margin-top:10px;}
 </style>
 </head>
 <body>
@@ -155,18 +175,22 @@ body, html {
 
 <!-- GIF seçme modal -->
 <div id="gifModal" class="gif-modal">
-  <h4>GIF Seç</h4>
-  <div class="gif-grid" id="gifGrid"></div>
-  <button id="gifCloseBtn">Kapat</button>
+  <div class="gif-modal-content">
+    <h4>GIF Seç</h4>
+    <div class="gif-grid" id="gifGrid"></div>
+    <button id="gifCloseBtn">Kapat</button>
+  </div>
 </div>
 
 <!-- Özel GIF şifre modal -->
 <div id="specialPassModal" class="gif-modal">
-  <h4>Özel GIF Şifresi</h4>
-  <input type="text" id="specialPassInput" placeholder="Şifreyi gir">
-  <br>
-  <button id="specialPassBtn">Onayla</button>
-  <button id="specialPassClose">Kapat</button>
+  <div class="gif-modal-content">
+    <h4>Özel GIF Şifresi</h4>
+    <input type="text" id="specialPassInput" placeholder="Şifreyi gir">
+    <br>
+    <button id="specialPassBtn">Onayla</button>
+    <button id="specialPassClose">Kapat</button>
+  </div>
 </div>
 
 <script type="module">
@@ -189,7 +213,6 @@ const db = getFirestore(app);
 const messagesRef = collection(db, "messages");
 const q = query(messagesRef, orderBy("createdAt"));
 
-// DOM
 const usernameModal = document.getElementById("usernameModal");
 const usernameInput = document.getElementById("usernameInput");
 const saveUsernameBtn = document.getElementById("saveUsername");
@@ -214,21 +237,12 @@ let username = localStorage.getItem("chatUsername") || "";
 // GIF listeleri
 const specialGifs = [
 "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/veAy5UOhBdS3C/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/of7ly2wRNo6Kk/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2V4cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZqihO0jGDKc8SJYmRB/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm1hZjdwYTFraDNpYzEwZXVva3owYjlkYmpnMmlnbzl2OWFodGwxeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vVzfZLROJZ2LK/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExazd2ZzFhM2E4cHF2d2Q5MXhmZmwzMWZtY3hqNmEyMDRhcmF0YXFiMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/C23q4oydK7Xva/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif"
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/of7ly2wRNo6Kk/giphy.gif"
 ];
 
 const funGifs = [
-"https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif","https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
-"https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif","https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
-"https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif","https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif",
-"https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif","https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif",
-"https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif","https://media.giphy.com/media/l1J9EdzfOSgfyueLm/giphy.gif"
-]; // 50 örnek ile tamamlayabilirsin
+"https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif","https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif"
+];
 
 // Kullanıcı adı modal
 function showChat(){
@@ -266,13 +280,13 @@ funGifBtn.addEventListener("click", ()=>{
     });
     gifGrid.appendChild(img);
   });
-  gifModal.style.display="block";
+  gifModal.style.display="flex";
 });
 
 // Özel GIF şifre modal
 specialBtn.addEventListener("click", ()=>{
   specialPassInput.value="";
-  specialPassModal.style.display="block";
+  specialPassModal.style.display="flex";
 });
 
 // Özel GIF şifre kontrolü
@@ -293,35 +307,30 @@ specialPassBtn.addEventListener("click", ()=>{
       });
       gifGrid.appendChild(img);
     });
-    gifModal.style.display="block";
+    gifModal.style.display="flex";
     specialPassModal.style.display="none";
   } else alert("Yanlış şifre!");
 });
 
 specialPassClose.addEventListener("click", ()=>specialPassModal.style.display="none");
-
-// GIF modal kapatma
 gifCloseBtn.addEventListener("click", ()=>gifModal.style.display="none");
 
 // WhatsApp tarzı kısa ping sesi
 const msgSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
-// Önceki mesajları takip etmek için
+// Önceki mesajları takip
 let displayedMessages = new Set();
 
 onSnapshot(q, snapshot=>{
   snapshot.docChanges().forEach(change => {
-    if(change.type === "added"){ // yeni mesaj eklendiğinde
+    if(change.type === "added"){
       const msg = change.doc.data();
       const msgId = change.doc.id;
-
-      // Daha önce eklenen mesajı tekrar ekleme
       if(displayedMessages.has(msgId)) return;
       displayedMessages.add(msgId);
 
       const div = document.createElement("div");
       div.classList.add("message", msg.user===username?"me":"other");
-
       if(msg.text) div.innerText = msg.user + ": " + msg.text;
       if(msg.gifURL){
         const img = document.createElement("img");
@@ -331,12 +340,10 @@ onSnapshot(q, snapshot=>{
       messagesDiv.appendChild(div);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-      // sadece diğer kullanıcı mesajında ses çal
       if(msg.user !== username) msgSound.play();
     }
   });
 });
-
 </script>
 </body>
 </html>
