@@ -64,7 +64,7 @@ body, html {
   padding:10px;
   display:flex;
   flex-direction:column;
-  margin-bottom:60px; /* input alanı için boşluk */
+  margin-bottom:65px; /* input alanı için boşluk */
 }
 
 .message {
@@ -115,17 +115,11 @@ body, html {
 
 /* GIF modal */
 .gif-modal {
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
   display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:10000;
+  flex-direction:column;
 }
 
-.gif-modal .gif-modal-content {
+.gif-modal-content {
   width:90%;
   max-width:500px;
   max-height:80%;
@@ -197,7 +191,6 @@ body, html {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD2L8HMfaX7CQyq018gYILH4gavT929PCA",
   authDomain: "birebir-16813.firebaseapp.com",
@@ -234,14 +227,23 @@ const specialPassClose = document.getElementById("specialPassClose");
 
 let username = localStorage.getItem("chatUsername") || "";
 
-// GIF listeleri
+// Senin GIF listelerin tamamen korunuyor
 const specialGifs = [
 "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/veAy5UOhBdS3C/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/of7ly2wRNo6Kk/giphy.gif"
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/of7ly2wRNo6Kk/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2V4cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZqihO0jGDKc8SJYmRB/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm1hZjdwYTFraDNpYzEwZXVva3owYjlkYmpnMmlnbzl2OWFodGwxeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vVzfZLROJZ2LK/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExazd2ZzFhM2E4cHF2d2Q5MXhmZmwzMWZtY3hqNmEyMDRhcmF0YXFiMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/C23q4oydK7Xva/giphy.gif",
+"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif"
 ];
 
 const funGifs = [
-"https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif","https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif"
+"https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif","https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+"https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif","https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
+"https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif","https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif",
+"https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif","https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif",
+"https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif","https://media.giphy.com/media/l1J9EdzfOSgfyueLm/giphy.gif"
 ];
 
 // Kullanıcı adı modal
