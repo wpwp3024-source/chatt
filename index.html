@@ -16,11 +16,12 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
 .message {max-width:70%; margin:5px 0; padding:10px; border-radius:10px; word-wrap:break-word;}
 .me {background:#dcf8c6; align-self:flex-end;}
 .other {background:#fff; align-self:flex-start;}
-.input-area {display:flex; padding:5px; background:#fff; align-items:center; gap:5px; position:sticky; bottom:0; flex-wrap:nowrap;}
+.input-area {display:flex; padding:5px; background:#fff; align-items:center; gap:5px; position:fixed; bottom:0; left:0; width:100%; box-sizing:border-box;}
 .input-area input[type=text] {flex:1; padding:10px; border:1px solid #ccc; border-radius:20px;}
 .input-area button {padding:10px; border:none; border-radius:20px; background:#128c7e; color:#fff; cursor:pointer; flex-shrink:0;}
 .message img {max-width:200px; border-radius:8px; margin-top:5px;}
-.message audio {display:none;}
+.message audio {width:200px; margin-top:5px;}
+#recordingStatus {color:green; margin-left:10px; display:none;}
 </style>
 </head>
 <body>
@@ -41,6 +42,8 @@ body, html {margin:0; padding:0; height:100%; font-family:Arial,sans-serif; back
     <input type="text" id="msgInput" placeholder="Mesaj yaz..." />
     <input type="file" id="photoInput" accept="image/*" style="display:none;">
     <button id="photoBtn">📷</button>
+    <button id="recordBtn">🎤</button>
+    <span id="recordingStatus">Ses kaydediliyor... 0s</span>
     <button id="sendBtn">Gönder</button>
   </div>
 </div>
@@ -55,7 +58,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyD2L8HMfaX7CQyq018gYILH4gavT929PCA",
   authDomain: "birebir-16813.firebaseapp.com",
   projectId: "birebir-16813",
-  storageBucket: "birebir-16813.firebasestorage.app",
+  storageBucket: "birebir-16813.appspot.com",
   messagingSenderId: "1054525917122",
   appId: "1:1054525917122:web:27a7ea9cde7bf035c5385b",
   measurementId: "G-PX4GQDZ6KD"
@@ -77,6 +80,8 @@ const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
 const photoBtn = document.getElementById("photoBtn");
 const photoInput = document.getElementById("photoInput");
+const recordBtn = document.getElementById("recordBtn");
+const recordingStatus = document.getElementById("recordingStatus");
 
 let username = localStorage.getItem("chatUsername") || "";
 
@@ -93,7 +98,7 @@ saveUsernameBtn.addEventListener("click", ()=>{
   else alert("Lütfen geçerli bir ad girin.");
 });
 
-// Text mesaj gönderme (Enter tuşu dahil)
+// Text mesaj gönderme
 async function sendText(e){
   if(e) e.preventDefault();
   const text = msgInput.value.trim();
@@ -115,6 +120,46 @@ photoInput.addEventListener("change", async e=>{
   photoInput.value="";
 });
 
+// Ses kaydı
+let mediaRecorder;
+let audioChunks = [];
+let recordingInterval;
+
+recordBtn.addEventListener("mousedown", async () => {
+  if(!navigator.mediaDevices) return alert("Tarayıcınız mikrofonu desteklemiyor!");
+  
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream);
+  audioChunks = [];
+
+  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  mediaRecorder.start();
+
+  let seconds = 0;
+  recordingStatus.style.display = "inline";
+  recordingStatus.innerText = `Ses kaydediliyor... ${seconds}s`;
+  
+  recordingInterval = setInterval(()=>{
+    seconds++;
+    recordingStatus.innerText = `Ses kaydediliyor... ${seconds}s`;
+  },1000);
+});
+
+recordBtn.addEventListener("mouseup", async () => {
+  if(!mediaRecorder) return;
+  mediaRecorder.stop();
+  clearInterval(recordingInterval);
+  recordingStatus.style.display = "none";
+
+  mediaRecorder.onstop = async () => {
+    const blob = new Blob(audioChunks, { type: "audio/webm" });
+    const fileRef = ref(storage, `audio/${username}_${Date.now()}.webm`);
+    await uploadBytes(fileRef, blob);
+    const url = await getDownloadURL(fileRef);
+    await addDoc(messagesRef, {user:username, audioURL:url, createdAt:serverTimestamp()});
+  };
+});
+
 // Realtime mesajları dinle
 onSnapshot(q, snapshot=>{
   messagesDiv.innerHTML="";
@@ -122,15 +167,34 @@ onSnapshot(q, snapshot=>{
     const msg = doc.data();
     const div = document.createElement("div");
     div.classList.add("message", msg.user===username?"me":"other");
-    if(msg.text) div.innerText = msg.user+": "+msg.text;
+
+    if(msg.text){
+      const userSpan = document.createElement("span");
+      userSpan.style.fontWeight="bold";
+      userSpan.innerText = msg.user+": ";
+      div.appendChild(userSpan);
+
+      const textSpan = document.createElement("span");
+      textSpan.innerText = msg.text;
+      div.appendChild(textSpan);
+    }
+
     if(msg.imageURL){
       const img = document.createElement("img");
       img.src = msg.imageURL;
       div.appendChild(img);
     }
+
+    if(msg.audioURL){
+      const audio = document.createElement("audio");
+      audio.src = msg.audioURL;
+      audio.controls = true;
+      div.appendChild(audio);
+    }
+
     messagesDiv.appendChild(div);
   });
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  messagesDiv.scrollTo({ top: messagesDiv.scrollHeight, behavior: 'smooth' });
 });
 </script>
 </body>
