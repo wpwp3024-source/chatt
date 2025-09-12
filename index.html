@@ -24,6 +24,7 @@ body, html {
   flex:1;
   overflow-y:auto;
   padding:10px;
+  padding-bottom:70px; /* input alanının üstüne gelmesi için boşluk */
   display:flex;
   flex-direction:column;
 }
@@ -277,7 +278,7 @@ const notifToggle = document.getElementById("notifToggle");
 const settingsClose = document.getElementById("settingsClose");
 
 let username = localStorage.getItem("chatUsername") || "";
-let notifEnabled = true; // bildirim sesi
+let notifEnabled = true;
 
 // Modal kontrolü
 if(username){
@@ -337,7 +338,7 @@ funGifBtn.addEventListener("click", ()=>{
     img.src=url;
     img.addEventListener("click", async ()=>{
       await addDoc(messagesRef,{user:username,gifURL:url,createdAt:serverTimestamp()});
-      gifModal.style.display="flex";
+      gifModal.style.display="none";
     });
     gifGrid.appendChild(img);
   });
@@ -364,6 +365,7 @@ specialPassBtn.addEventListener("click", ()=>{
       img.addEventListener("click", async ()=>{
         await addDoc(messagesRef,{user:username,gifURL:url,createdAt:serverTimestamp()});
         specialPassModal.style.display="none";
+        gifModal.style.display="none";
       });
       gifGrid.appendChild(img);
     });
@@ -404,9 +406,9 @@ onSnapshot(q, snapshot=>{
   });
 });
 
-// 5 kez tıklayınca ayarlar modalı aç
+// 5 kez GIF alanına tıklayınca ayarlar modalı aç
 let clickCount = 0;
-document.body.addEventListener("click", ()=>{
+gifBtn.addEventListener("click", ()=>{
   clickCount++;
   if(clickCount >=5){
     settingsModal.style.display="flex";
