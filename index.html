@@ -100,7 +100,7 @@ body, html {
   flex-shrink:0;
 }
 
-/* GIF panel */
+/* GIF seçme modal */
 .gif-modal {
   position:fixed;
   top:50%; left:50%;
@@ -110,36 +110,16 @@ body, html {
   border-radius:10px;
   display:none;
   z-index:10000;
-  max-width:500px;
-  width:90%;
-  max-height:80%;
-  overflow-y:auto;
+  max-width:400px;
 }
-.gif-modal-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
-.gif-modal-header input {
-  flex:1;
-  padding:5px;
-  margin-right:10px;
-  border-radius:5px;
-  border:1px solid #ccc;
-}
-.gif-close {
-  cursor:pointer;
-  font-size:20px;
-  font-weight:bold;
-}
-.gif-grid {
+.gif-modal h4 {margin-top:0;}
+.gif-modal .gif-grid {
   display:flex;
   flex-wrap:wrap;
   gap:10px;
   justify-content:center;
 }
-.gif-grid img {
+.gif-modal .gif-grid img {
   width:80px;
   height:80px;
   cursor:pointer;
@@ -169,12 +149,9 @@ body, html {
   </div>
 </div>
 
-<!-- GIF panel -->
+<!-- GIF seçme modal -->
 <div id="gifModal" class="gif-modal">
-  <div class="gif-modal-header">
-    <input type="text" id="gifSearch" placeholder="GIF ara..." />
-    <span id="gifClose" class="gif-close">&times;</span>
-  </div>
+  <h4>Bir GIF seç</h4>
   <div class="gif-grid" id="gifGrid"></div>
 </div>
 
@@ -209,8 +186,6 @@ const sendBtn = document.getElementById("sendBtn");
 const gifBtn = document.getElementById("gifBtn");
 const gifModal = document.getElementById("gifModal");
 const gifGrid = document.getElementById("gifGrid");
-const gifSearch = document.getElementById("gifSearch");
-const gifClose = document.getElementById("gifClose");
 
 let username = localStorage.getItem("chatUsername") || "";
 
@@ -238,41 +213,29 @@ async function sendText(e){
 sendBtn.addEventListener("click", sendText);
 msgInput.addEventListener("keydown", e=>{ if(e.key === "Enter") sendText(e); });
 
-// Giphy API (public beta key)
-const giphyApiKey = "dc6zaTOxFJmzC"; // demo key
-async function fetchGIFs(query="funny", limit=25){
-  const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${giphyApiKey}&q=${encodeURIComponent(query)}&limit=${limit}`);
-  const data = await res.json();
-  return data.data.map(g=>g.images.fixed_height_small.url);
-}
+// GIF modal ve gönderme
+const gifList = [
+  "https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif",
+  "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+  "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
+  "https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
+  "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif"
+];
 
-// GIF panel aç/kapat
-gifBtn.addEventListener("click", async ()=>{
-  gifModal.style.display="block";
-  loadGIFs();
-});
-gifClose.addEventListener("click", ()=>{ gifModal.style.display="none"; });
-
-// GIF arama
-gifSearch.addEventListener("keydown", async e=>{
-  if(e.key === "Enter"){
-    loadGIFs(gifSearch.value.trim() || "funny");
-  }
-});
-
-async function loadGIFs(searchTerm="funny"){
+// GIF butonuna tıklandığında modal açılır
+gifBtn.addEventListener("click", ()=>{
   gifGrid.innerHTML = "";
-  const urls = await fetchGIFs(searchTerm, 25);
-  urls.forEach(url=>{
+  gifList.forEach(url=>{
     const img = document.createElement("img");
     img.src = url;
     img.addEventListener("click", async ()=>{
       await addDoc(messagesRef, {user:username, gifURL:url, createdAt:serverTimestamp()});
-      gifModal.style.display="none";
+      gifModal.style.display = "none";
     });
     gifGrid.appendChild(img);
   });
-}
+  gifModal.style.display = "block";
+});
 
 // Realtime mesajları dinle
 onSnapshot(q, snapshot=>{
