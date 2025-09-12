@@ -14,46 +14,8 @@ body, html {
   background-size: cover;
 }
 
-.modal, .gif-modal {
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
-}
-
-.modal-content, .gif-modal-content {
-  background:#fff;
-  padding:20px;
-  border-radius:10px;
-  text-align:center;
-  width:90%;
-  max-width:350px;
-}
-
-.modal input, .gif-modal input {
-  width:80%;
-  padding:10px;
-  margin-top:10px;
-  border-radius:5px;
-  border:1px solid #ccc;
-}
-
-.modal button, .gif-modal button {
-  margin-top:10px;
-  padding:10px 20px;
-  border:none;
-  border-radius:5px;
-  background:#128c7e;
-  color:#fff;
-  cursor:pointer;
-}
-
 .chat-container {
-  display:none;
+  display:flex;
   flex-direction:column;
   height:100vh;
 }
@@ -64,7 +26,6 @@ body, html {
   padding:10px;
   display:flex;
   flex-direction:column;
-  margin-bottom:65px; /* input alanı için boşluk */
 }
 
 .message {
@@ -90,9 +51,6 @@ body, html {
   background:#fff;
   align-items:center;
   gap:5px;
-  position:fixed;
-  bottom:0;
-  width:100%;
   box-sizing:border-box;
 }
 
@@ -104,38 +62,65 @@ body, html {
 }
 
 .input-area button {
-  padding:10px;
+  padding:10px 15px;
   border:none;
   border-radius:20px;
   background:#128c7e;
   color:#fff;
   cursor:pointer;
-  flex-shrink:0;
+}
+
+/* GIF seçenek popup */
+.gif-options {
+  position:absolute;
+  bottom:60px;
+  right:5px;
+  background:#fff;
+  border-radius:10px;
+  padding:5px;
+  display:none;
+  flex-direction:column;
+  gap:5px;
+  z-index:1000;
+}
+.gif-options button {
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  background:#128c7e;
+  color:#fff;
+  cursor:pointer;
 }
 
 /* GIF modal */
 .gif-modal {
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
   display:none;
-  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
 }
-
 .gif-modal-content {
+  background:#fff;
   width:90%;
-  max-width:500px;
+  max-width:400px;
   max-height:80%;
   overflow:auto;
-  padding:15px;
   border-radius:10px;
-  background:#fff;
+  padding:15px;
+  text-align:center;
 }
 
-.gif-modal h4 {margin-top:0; text-align:center;}
 .gif-grid {
   display:flex;
   flex-wrap:wrap;
   gap:10px;
   justify-content:center;
 }
+
 .gif-grid img {
   width:80px;
   height:80px;
@@ -143,17 +128,42 @@ body, html {
   border-radius:8px;
   object-fit:cover;
 }
+
+.gif-modal-content button {
+  margin-top:10px;
+  padding:8px 15px;
+  border:none;
+  border-radius:8px;
+  background:#128c7e;
+  color:#fff;
+  cursor:pointer;
+}
+
+/* Kullanıcı adı modal */
+#usernameModal {
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:10000;
+}
+#usernameModal .gif-modal-content {
+  max-width:300px;
+}
 </style>
 </head>
 <body>
 
 <!-- Kullanıcı adı modal -->
-<div id="usernameModal" class="modal">
-  <div class="modal-content">
-    <h3>Kullanıcı adını gir</h3>
-    <input type="text" id="usernameInput" placeholder="Adın..."/>
+<div id="usernameModal">
+  <div class="gif-modal-content">
+    <h4>Kullanıcı adını gir</h4>
+    <input type="text" id="usernameInput" placeholder="Adınız...">
     <br>
-    <button id="saveUsername">Başla</button>
+    <button id="saveUsername">Kaydet ve Başla</button>
   </div>
 </div>
 
@@ -162,13 +172,18 @@ body, html {
   <div class="input-area">
     <input type="text" id="msgInput" placeholder="Mesaj yaz..." />
     <button id="sendBtn">Gönder</button>
-    <button id="funGifBtn">Eğlenceli GIF</button>
-    <button id="specialBtn">Özel GIF</button>
+    <button id="gifBtn">GIF</button>
   </div>
 </div>
 
-<!-- GIF seçme modal -->
-<div id="gifModal" class="gif-modal">
+<!-- GIF seçenek popup -->
+<div class="gif-options" id="gifOptions">
+  <button id="funGifBtn">Eğlenceli GIF</button>
+  <button id="specialBtn">Özel GIF</button>
+</div>
+
+<!-- GIF modal -->
+<div class="gif-modal" id="gifModal">
   <div class="gif-modal-content">
     <h4>GIF Seç</h4>
     <div class="gif-grid" id="gifGrid"></div>
@@ -177,7 +192,7 @@ body, html {
 </div>
 
 <!-- Özel GIF şifre modal -->
-<div id="specialPassModal" class="gif-modal">
+<div class="gif-modal" id="specialPassModal">
   <div class="gif-modal-content">
     <h4>Özel GIF Şifresi</h4>
     <input type="text" id="specialPassInput" placeholder="Şifreyi gir">
@@ -206,38 +221,44 @@ const db = getFirestore(app);
 const messagesRef = collection(db, "messages");
 const q = query(messagesRef, orderBy("createdAt"));
 
-const usernameModal = document.getElementById("usernameModal");
-const usernameInput = document.getElementById("usernameInput");
-const saveUsernameBtn = document.getElementById("saveUsername");
-const chatContainer = document.getElementById("chatContainer");
+// DOM
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
-
+const gifBtn = document.getElementById("gifBtn");
+const gifOptions = document.getElementById("gifOptions");
+const funGifBtn = document.getElementById("funGifBtn");
+const specialBtn = document.getElementById("specialBtn");
 const gifModal = document.getElementById("gifModal");
 const gifGrid = document.getElementById("gifGrid");
 const gifCloseBtn = document.getElementById("gifCloseBtn");
-
-const funGifBtn = document.getElementById("funGifBtn");
-const specialBtn = document.getElementById("specialBtn");
 const specialPassModal = document.getElementById("specialPassModal");
 const specialPassInput = document.getElementById("specialPassInput");
 const specialPassBtn = document.getElementById("specialPassBtn");
 const specialPassClose = document.getElementById("specialPassClose");
+const usernameModal = document.getElementById("usernameModal");
+const usernameInput = document.getElementById("usernameInput");
+const saveUsernameBtn = document.getElementById("saveUsername");
 
 let username = localStorage.getItem("chatUsername") || "";
 
-// Senin GIF listelerin tamamen korunuyor
-const specialGifs = [
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/veAy5UOhBdS3C/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/of7ly2wRNo6Kk/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2V4cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZqihO0jGDKc8SJYmRB/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm1hZjdwYTFraDNpYzEwZXVva3owYjlkYmpnMmlnbzl2OWFodGwxeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vVzfZLROJZ2LK/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExazd2ZzFhM2E4cHF2d2Q5MXhmZmwzMWZtY3hqNmEyMDRhcmF0YXFiMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/C23q4oydK7Xva/giphy.gif",
-"https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif"
-];
+// Modal kontrolü
+if(username){
+  usernameModal.style.display="none";
+} else {
+  usernameModal.style.display="flex";
+}
 
+saveUsernameBtn.addEventListener("click", ()=>{
+  const val = usernameInput.value.trim();
+  if(val){
+    username = val;
+    localStorage.setItem("chatUsername", username);
+    usernameModal.style.display="none";
+  } else alert("Lütfen geçerli bir ad girin!");
+});
+
+// GIF listeleri
 const funGifs = [
 "https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif","https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
 "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif","https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
@@ -246,18 +267,16 @@ const funGifs = [
 "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif","https://media.giphy.com/media/l1J9EdzfOSgfyueLm/giphy.gif"
 ];
 
-// Kullanıcı adı modal
-function showChat(){
-  usernameModal.style.display="none";
-  chatContainer.style.display="flex";
-}
-if(username) showChat(); else usernameModal.style.display="flex";
+const specialGifs = [
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWd3b3FwN2Y3ZjFrMGFyOHFkczQxb2hzMnpzbzFqbzRzbW95cW15dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/veAy5UOhBdS3C/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3cmJyaXl4ZmFzYmI0YXhtbjBuYjBpYWhjcG95dDN1cmFrMXF1Y2V4byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/tB0P33Am1oZck/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3cmJyaXl4ZmFzYmI0YXhtbjBuYjBpYWhjcG95dDN1cmFrMXF1Y2V4byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/of7ly2wRNo6Kk/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3a2VwZTdlNWZtMnU3ajk2OHhtbHo2OXgyaG1wb3A2cW14eWxoZjN3eCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZqihO0jGDKc8SJYmRB/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bm1hZjdwYTFraDNpYzEwZXVva3owYjlkYmpnMmlnbzl2OWFodGwxeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/vVzfZLROJZ2LK/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azd2ZzFhM2E4cHF2d2Q5MXhmZmwzMWZtY3hqNmEyMDRhcmF0YXFiMCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/C23q4oydK7Xva/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif"
+];
 
-saveUsernameBtn.addEventListener("click", ()=>{
-  const val = usernameInput.value.trim();
-  if(val){ username=val; localStorage.setItem("chatUsername", username); showChat(); }
-  else alert("Lütfen geçerli bir ad girin.");
-});
 
 // Mesaj gönderme
 async function sendText(e){
@@ -270,42 +289,45 @@ async function sendText(e){
 sendBtn.addEventListener("click", sendText);
 msgInput.addEventListener("keydown", e=>{ if(e.key==="Enter") sendText(e); });
 
-// Eğlenceli GIF modal aç
+// GIF seçenek aç/kapa
+gifBtn.addEventListener("click", ()=>{ gifOptions.style.display = gifOptions.style.display==="flex"?"none":"flex"; });
+
+// Eğlenceli GIF
 funGifBtn.addEventListener("click", ()=>{
+  gifOptions.style.display="none";
   gifGrid.innerHTML="";
   funGifs.forEach(url=>{
     const img=document.createElement("img");
     img.src=url;
     img.addEventListener("click", async ()=>{
       await addDoc(messagesRef,{user:username,gifURL:url,createdAt:serverTimestamp()});
-      gifModal.style.display="none";
+      gifModal.style.display="flex";
     });
     gifGrid.appendChild(img);
   });
   gifModal.style.display="flex";
 });
 
-// Özel GIF şifre modal
+// Özel GIF
 specialBtn.addEventListener("click", ()=>{
+  gifOptions.style.display="none";
   specialPassInput.value="";
   specialPassModal.style.display="flex";
 });
 
-// Özel GIF şifre kontrolü
+// Şifre kontrolü
 specialPassBtn.addEventListener("click", ()=>{
   const now=new Date();
   const hour=now.getHours().toString().padStart(2,'0');
   const min=now.getMinutes().toString().padStart(2,'0');
-  const currentPassword = hour+min;
-
-  if(specialPassInput.value === currentPassword){
+  if(specialPassInput.value === hour+min){
     gifGrid.innerHTML="";
     specialGifs.forEach(url=>{
       const img=document.createElement("img");
       img.src=url;
       img.addEventListener("click", async ()=>{
         await addDoc(messagesRef,{user:username,gifURL:url,createdAt:serverTimestamp()});
-        specialPassModal.style.display = "none";
+        specialPassModal.style.display="none";
       });
       gifGrid.appendChild(img);
     });
@@ -317,15 +339,14 @@ specialPassBtn.addEventListener("click", ()=>{
 specialPassClose.addEventListener("click", ()=>specialPassModal.style.display="none");
 gifCloseBtn.addEventListener("click", ()=>gifModal.style.display="none");
 
-// WhatsApp tarzı kısa ping sesi
+// Mesaj sesleri
 const msgSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
-// Önceki mesajları takip
+// Mesajları takip
 let displayedMessages = new Set();
-
 onSnapshot(q, snapshot=>{
   snapshot.docChanges().forEach(change => {
-    if(change.type === "added"){
+    if(change.type==="added"){
       const msg = change.doc.data();
       const msgId = change.doc.id;
       if(displayedMessages.has(msgId)) return;
@@ -342,7 +363,7 @@ onSnapshot(q, snapshot=>{
       messagesDiv.appendChild(div);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-      if(msg.user !== username) msgSound.play();
+      if(msg.user!==username) msgSound.play();
     }
   });
 });
