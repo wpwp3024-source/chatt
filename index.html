@@ -14,6 +14,7 @@ body, html {
   background-size: cover;
 }
 
+/* Kullanıcı adı modal */
 .modal {
   position:fixed;
   top:0; left:0;
@@ -49,6 +50,7 @@ body, html {
   cursor:pointer;
 }
 
+/* Chat alanı */
 .chat-container {
   display:none;
   flex-direction:column;
@@ -100,7 +102,7 @@ body, html {
   flex-shrink:0;
 }
 
-/* GIF seçme modal */
+/* GIF modal */
 .gif-modal {
   position:fixed;
   top:50%; left:50%;
@@ -110,21 +112,37 @@ body, html {
   border-radius:10px;
   display:none;
   z-index:10000;
-  max-width:400px;
+  max-width:90%;
+  width:400px;
+  max-height:70%;
+  overflow-y:auto;
 }
-.gif-modal h4 {margin-top:0;}
-.gif-modal .gif-grid {
+.gif-modal-header {
   display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  justify-content:center;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
 }
-.gif-modal .gif-grid img {
+.gif-close {
+  cursor:pointer;
+  font-size:24px;
+  font-weight:bold;
+}
+.gif-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap:10px;
+  justify-items:center;
+}
+.gif-grid img {
   width:80px;
   height:80px;
   cursor:pointer;
   border-radius:8px;
   object-fit:cover;
+}
+@media(max-width:500px){
+  .gif-grid img { width:60px; height:60px; }
 }
 </style>
 </head>
@@ -140,6 +158,7 @@ body, html {
   </div>
 </div>
 
+<!-- Chat container -->
 <div class="chat-container" id="chatContainer">
   <div class="messages" id="messages"></div>
   <div class="input-area">
@@ -149,9 +168,12 @@ body, html {
   </div>
 </div>
 
-<!-- GIF seçme modal -->
+<!-- GIF modal -->
 <div id="gifModal" class="gif-modal">
-  <h4>Bir GIF seç</h4>
+  <div class="gif-modal-header">
+    <h4>Bir GIF seç</h4>
+    <span id="gifClose" class="gif-close">&times;</span>
+  </div>
   <div class="gif-grid" id="gifGrid"></div>
 </div>
 
@@ -186,6 +208,7 @@ const sendBtn = document.getElementById("sendBtn");
 const gifBtn = document.getElementById("gifBtn");
 const gifModal = document.getElementById("gifModal");
 const gifGrid = document.getElementById("gifGrid");
+const gifClose = document.getElementById("gifClose");
 
 let username = localStorage.getItem("chatUsername") || "";
 
@@ -213,13 +236,18 @@ async function sendText(e){
 sendBtn.addEventListener("click", sendText);
 msgInput.addEventListener("keydown", e=>{ if(e.key === "Enter") sendText(e); });
 
-// GIF modal ve gönderme
+// GIF listesi
 const gifList = [
   "https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif",
   "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
   "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
   "https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
-  "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif"
+  "https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif",
+  "https://media.giphy.com/media/3o6ZtpxSZbQRRnwCKQ/giphy.gif",
+  "https://media.giphy.com/media/3oEjHGrVGrqgFFknfO/giphy.gif",
+  "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif",
+  "https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif",
+  "https://media.giphy.com/media/3oKIPwoeGErMmaI43C/giphy.gif"
 ];
 
 // GIF butonuna tıklandığında modal açılır
@@ -235,6 +263,11 @@ gifBtn.addEventListener("click", ()=>{
     gifGrid.appendChild(img);
   });
   gifModal.style.display = "block";
+});
+
+// Çarpı butonu ile GIF modal kapatma
+gifClose.addEventListener("click", ()=>{
+  gifModal.style.display = "none";
 });
 
 // Realtime mesajları dinle
