@@ -24,7 +24,7 @@ body, html {
   flex:1;
   overflow-y:auto;
   padding:10px;
-  padding-bottom:70px; /* input alanının üstüne gelmesi için boşluk */
+  padding-bottom:70px;
   display:flex;
   flex-direction:column;
 }
@@ -76,7 +76,6 @@ body, html {
   cursor:pointer;
 }
 
-/* GIF seçenek popup */
 .gif-options {
   position:absolute;
   bottom:60px;
@@ -98,7 +97,6 @@ body, html {
   cursor:pointer;
 }
 
-/* GIF modal */
 .gif-modal {
   position:fixed;
   top:0; left:0;
@@ -145,7 +143,6 @@ body, html {
   cursor:pointer;
 }
 
-/* Kullanıcı adı modal */
 #usernameModal {
   position:fixed;
   top:0; left:0;
@@ -160,7 +157,6 @@ body, html {
   max-width:300px;
 }
 
-/* Ayarlar modal */
 #settingsModal {
   position:fixed;
   top:0; left:0;
@@ -178,7 +174,6 @@ body, html {
 </head>
 <body>
 
-<!-- Kullanıcı adı modal -->
 <div id="usernameModal">
   <div class="gif-modal-content">
     <h4>Kullanıcı adını gir</h4>
@@ -197,13 +192,11 @@ body, html {
   </div>
 </div>
 
-<!-- GIF seçenek popup -->
 <div class="gif-options" id="gifOptions">
   <button id="funGifBtn">Eğlenceli GIF</button>
   <button id="specialBtn">Özel GIF</button>
 </div>
 
-<!-- GIF modal -->
 <div class="gif-modal" id="gifModal">
   <div class="gif-modal-content">
     <h4>GIF Seç</h4>
@@ -212,7 +205,6 @@ body, html {
   </div>
 </div>
 
-<!-- Özel GIF şifre modal -->
 <div class="gif-modal" id="specialPassModal">
   <div class="gif-modal-content">
     <h4>Özel GIF Şifresi</h4>
@@ -223,7 +215,6 @@ body, html {
   </div>
 </div>
 
-<!-- Ayarlar modalı -->
 <div id="settingsModal">
   <div class="gif-modal-content">
     <h4>Ayarlar</h4>
@@ -237,7 +228,10 @@ body, html {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { 
+  getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot,
+  getDocs, deleteDoc, doc
+} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2L8HMfaX7CQyq018gYILH4gavT929PCA",
@@ -254,7 +248,6 @@ const db = getFirestore(app);
 const messagesRef = collection(db, "messages");
 const q = query(messagesRef, orderBy("createdAt"));
 
-// DOM
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
@@ -280,7 +273,6 @@ const settingsClose = document.getElementById("settingsClose");
 let username = localStorage.getItem("chatUsername") || "";
 let notifEnabled = true;
 
-// Modal kontrolü
 if(username){
   usernameModal.style.display="none";
 } else {
@@ -296,7 +288,6 @@ saveUsernameBtn.addEventListener("click", ()=>{
   } else alert("Lütfen geçerli bir ad girin!");
 });
 
-// GIF listeleri
 const funGifs = [
 "https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif","https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
 "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif","https://media.giphy.com/media/26xBJu2d3vLb86rWM/giphy.gif",
@@ -315,7 +306,6 @@ const specialGifs = [
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbDBwNjY3cXBwYmgxMnpqbnBlbDU2ZXQ2dDdtNDJzNnRxNXlhcm03NiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/426FJ0tfyW316/giphy.gif"
 ];
 
-// Mesaj gönderme
 async function sendText(e){
   if(e) e.preventDefault();
   const text = msgInput.value.trim();
@@ -326,10 +316,8 @@ async function sendText(e){
 sendBtn.addEventListener("click", sendText);
 msgInput.addEventListener("keydown", e=>{ if(e.key==="Enter") sendText(e); });
 
-// GIF seçenek aç/kapa
 gifBtn.addEventListener("click", ()=>{ gifOptions.style.display = gifOptions.style.display==="flex"?"none":"flex"; });
 
-// Eğlenceli GIF
 funGifBtn.addEventListener("click", ()=>{
   gifOptions.style.display="none";
   gifGrid.innerHTML="";
@@ -345,14 +333,12 @@ funGifBtn.addEventListener("click", ()=>{
   gifModal.style.display="flex";
 });
 
-// Özel GIF
 specialBtn.addEventListener("click", ()=>{
   gifOptions.style.display="none";
   specialPassInput.value="";
   specialPassModal.style.display="flex";
 });
 
-// Şifre kontrolü
 specialPassBtn.addEventListener("click", ()=>{
   const now=new Date();
   const hour=now.getHours().toString().padStart(2,'0');
@@ -377,10 +363,8 @@ specialPassBtn.addEventListener("click", ()=>{
 specialPassClose.addEventListener("click", ()=>specialPassModal.style.display="none");
 gifCloseBtn.addEventListener("click", ()=>gifModal.style.display="none");
 
-// Mesaj sesleri
 const msgSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
-// Mesajları takip
 let displayedMessages = new Set();
 onSnapshot(q, snapshot=>{
   snapshot.docChanges().forEach(change => {
@@ -406,7 +390,6 @@ onSnapshot(q, snapshot=>{
   });
 });
 
-// 5 kez GIF alanına tıklayınca ayarlar modalı aç
 let clickCount = 0;
 gifBtn.addEventListener("click", ()=>{
   clickCount++;
@@ -417,10 +400,29 @@ gifBtn.addEventListener("click", ()=>{
 });
 settingsClose.addEventListener("click", ()=>settingsModal.style.display="none");
 
-// Bildirim sesi toggle
 notifToggle.addEventListener("change", ()=>{
   notifEnabled = notifToggle.checked;
 });
+
+// === Gece 00:00'da sohbet sıfırlama ===
+async function resetMessagesAtMidnight(){
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+
+  if(h === 0 && m === 0){ 
+    const snap = await getDocs(messagesRef);
+    snap.forEach(async d=>{
+      await deleteDoc(doc(db, "messages", d.id));
+    });
+    messagesDiv.innerHTML = "";
+    displayedMessages.clear();
+    console.log("Gece 00:00 → Mesajlar sıfırlandı");
+  }
+}
+
+setInterval(resetMessagesAtMidnight, 60000);
+
 </script>
 </body>
 </html>
