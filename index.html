@@ -10,7 +10,6 @@ body, html {
   padding:0;
   height:100%;
   font-family:Arial,sans-serif;
-  /* Net manzara arka plan */
   background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
   background-size: cover;
 }
@@ -71,6 +70,11 @@ body, html {
 }
 .me {background:#dcf8c6; align-self:flex-end;}
 .other {background:#fff; align-self:flex-start;}
+.message img {
+  max-width:200px;
+  border-radius:8px;
+  margin-top:5px;
+}
 .input-area {
   display:flex;
   padding:5px;
@@ -95,6 +99,53 @@ body, html {
   cursor:pointer;
   flex-shrink:0;
 }
+
+/* GIF panel */
+.gif-modal {
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%, -50%);
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  display:none;
+  z-index:10000;
+  max-width:500px;
+  width:90%;
+  max-height:80%;
+  overflow-y:auto;
+}
+.gif-modal-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+.gif-modal-header input {
+  flex:1;
+  padding:5px;
+  margin-right:10px;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+.gif-close {
+  cursor:pointer;
+  font-size:20px;
+  font-weight:bold;
+}
+.gif-grid {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+}
+.gif-grid img {
+  width:80px;
+  height:80px;
+  cursor:pointer;
+  border-radius:8px;
+  object-fit:cover;
+}
 </style>
 </head>
 <body>
@@ -114,7 +165,17 @@ body, html {
   <div class="input-area">
     <input type="text" id="msgInput" placeholder="Mesaj yaz..." />
     <button id="sendBtn">Gönder</button>
+    <button id="gifBtn">GIF</button>
   </div>
+</div>
+
+<!-- GIF panel -->
+<div id="gifModal" class="gif-modal">
+  <div class="gif-modal-header">
+    <input type="text" id="gifSearch" placeholder="GIF ara..." />
+    <span id="gifClose" class="gif-close">&times;</span>
+  </div>
+  <div class="gif-grid" id="gifGrid"></div>
 </div>
 
 <script type="module">
@@ -145,6 +206,11 @@ const chatContainer = document.getElementById("chatContainer");
 const messagesDiv = document.getElementById("messages");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
+const gifBtn = document.getElementById("gifBtn");
+const gifModal = document.getElementById("gifModal");
+const gifGrid = document.getElementById("gifGrid");
+const gifSearch = document.getElementById("gifSearch");
+const gifClose = document.getElementById("gifClose");
 
 let username = localStorage.getItem("chatUsername") || "";
 
@@ -161,7 +227,7 @@ saveUsernameBtn.addEventListener("click", ()=>{
   else alert("Lütfen geçerli bir ad girin.");
 });
 
-// Text mesaj gönderme (Enter tuşu dahil)
+// Text mesaj gönderme
 async function sendText(e){
   if(e) e.preventDefault();
   const text = msgInput.value.trim();
@@ -172,6 +238,42 @@ async function sendText(e){
 sendBtn.addEventListener("click", sendText);
 msgInput.addEventListener("keydown", e=>{ if(e.key === "Enter") sendText(e); });
 
+// Giphy API (public beta key)
+const giphyApiKey = "dc6zaTOxFJmzC"; // demo key
+async function fetchGIFs(query="funny", limit=25){
+  const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${giphyApiKey}&q=${encodeURIComponent(query)}&limit=${limit}`);
+  const data = await res.json();
+  return data.data.map(g=>g.images.fixed_height_small.url);
+}
+
+// GIF panel aç/kapat
+gifBtn.addEventListener("click", async ()=>{
+  gifModal.style.display="block";
+  loadGIFs();
+});
+gifClose.addEventListener("click", ()=>{ gifModal.style.display="none"; });
+
+// GIF arama
+gifSearch.addEventListener("keydown", async e=>{
+  if(e.key === "Enter"){
+    loadGIFs(gifSearch.value.trim() || "funny");
+  }
+});
+
+async function loadGIFs(searchTerm="funny"){
+  gifGrid.innerHTML = "";
+  const urls = await fetchGIFs(searchTerm, 25);
+  urls.forEach(url=>{
+    const img = document.createElement("img");
+    img.src = url;
+    img.addEventListener("click", async ()=>{
+      await addDoc(messagesRef, {user:username, gifURL:url, createdAt:serverTimestamp()});
+      gifModal.style.display="none";
+    });
+    gifGrid.appendChild(img);
+  });
+}
+
 // Realtime mesajları dinle
 onSnapshot(q, snapshot=>{
   messagesDiv.innerHTML="";
@@ -179,7 +281,12 @@ onSnapshot(q, snapshot=>{
     const msg = doc.data();
     const div = document.createElement("div");
     div.classList.add("message", msg.user===username?"me":"other");
-    div.innerText = msg.user+": "+msg.text;
+    if(msg.text) div.innerText = msg.user+": "+msg.text;
+    if(msg.gifURL){
+      const img = document.createElement("img");
+      img.src = msg.gifURL;
+      div.appendChild(img);
+    }
     messagesDiv.appendChild(div);
   });
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
