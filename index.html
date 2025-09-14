@@ -96,10 +96,10 @@ function pushLog(text,speed=6,accent=false){
 function wrongAnswer(){
   dialogBtns.style.display='none';
   let countdown=5;
-  countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra yönlendirilecek...`;
+  countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra kapanacak...`;
   const interval=setInterval(()=>{
     countdown--;
-    countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra yönlendirilecek...`;
+    countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra kapanacak...`;
     if(countdown<=0){
       clearInterval(interval);
       // Mobil uyumlu şekilde yönlendirme
@@ -125,7 +125,7 @@ function redirectToChat(){
 
 // Sorular ve seçenekler
 const questions=[
-  {text:"DEMEK SEN GELDİN, HOŞ GELDİN.\nBANA NEDEN ULAŞMAK İSTİYOSUN!....", options:[{text:"Özledim", correct:true},{text:"Bir işim var senle", correct:true},{text:"Bilmiyorum", correct:false}]},
+  {text:"DEMEK SEN GELDİN, HOŞ GELDİN.\nBANA NEDEN ULAŞMAK İSTİYOSUN!....Sorulara Doğru Cevap Verirsen Bana Ulaşa Bilirsin..", options:[{text:"Özledim", correct:true},{text:"Bir işim var senle", correct:true},{text:"Bilmiyorum", correct:false}]},
   {text:"Benim Zamnım Çok Değerli Biliyosun Değil mi?", options:[{text:"Evet", correct:true},{text:"Hayır", correct:false}]},
   {text:"Ne kadar özledin?", options:[{text:"Az", correct:false},{text:"Çok", correct:true},{text:"Bilmiyorum", correct:false}]},
   {text:"Biliyorum sanki zorla doğru cevapları seçtiriyorum. Şu an içinden bana küfür ediyor musun?", options:[{text:"Evet", correct:false},{text:"Hayır", correct:true}]},
@@ -175,3 +175,4 @@ showQuestion();
 
 </body>
 </html>
+
