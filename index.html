@@ -1,94 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>365 Gün Geri Sayım</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SusquN Sanal Sekreter</title>
 <style>
-  /* Genel ayarlar */
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body, html {
-    height: 100%;
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    color: #fff;
-    padding: 20px;
-  }
-
-  /* Sayaç kutusu */
-  .countdown-container {
-    background: rgba(0,0,0,0.3);
-    padding: 40px 20px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    width: 100%;
-    max-width: 500px;
-    animation: fadeIn 2s ease;
-  }
-
-  #countdown {
-    font-size: 2.5em;
-    font-weight: 700;
-    margin-bottom: 25px;
-    letter-spacing: 1px;
-    text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-  }
-
-  #message {
-    font-size: 1em;
-    line-height: 1.6;
-    color: #fff;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-  }
-
-  /* Mobil uyumluluk */
-  @media(max-width: 480px){
-    #countdown { font-size: 2em; }
-    #message { font-size: 0.95em; }
-    .countdown-container { padding: 30px 15px; }
-  }
-
-  /* Fade in animasyonu */
-  @keyframes fadeIn {
-    from { opacity:0; transform: translateY(-20px); }
-    to { opacity:1; transform: translateY(0); }
-  }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;font-family:"Courier New",Courier,monospace;background:#000;color:#33ff77;overflow:hidden;}
+canvas#matrix{position:fixed;inset:0;z-index:0;opacity:.95}
+.terminal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:90%;max-width:980px;height:70vh;max-height:720px;background:linear-gradient(180deg,rgba(0,0,0,.85),rgba(8,8,8,.7));border:1px solid rgba(51,255,119,.12);box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.02);border-radius:8px;z-index:2;overflow:hidden;display:flex;flex-direction:column;}
+.term-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(51,255,119,.04);}
+.dots{display:flex;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;opacity:.95}
+.dot.red{background:#ff5f56}
+.dot.yellow{background:#ffbd2e}
+.dot.green{background:#27c93f}
+.title{flex:1;text-align:center;font-weight:700;color:rgba(51,255,119,.95)}
+.term-body{padding:18px;flex:1;display:flex;flex-direction:column;}
+.screen{flex:1;background:rgba(0,0,0,.25);border-radius:6px;padding:12px;overflow:auto;box-shadow:inset 0 0 30px rgba(0,0,0,.6);border:1px solid rgba(51,255,119,.05);}
+.log{white-space:pre-wrap;font-size:14px;line-height:1.35}
+.dialog-btns{margin-top:10px;display:flex;flex-direction:column;gap:10px;}
+.dialog-btns button{padding:8px 12px;background:rgba(51,255,119,.05);border:1px solid rgba(51,255,119,.08);border-radius:5px;color:#33ff77;cursor:pointer;font-size:14px;}
+.countdown{color:red;font-weight:bold;margin-top:10px;}
+@media (max-width:720px){.terminal{height:82vh;padding:12px}}
 </style>
 </head>
 <body>
 
-<div class="countdown-container">
-  <div id="countdown"></div>
-  <div id="message">
-   @susqun Offline Bundan Sonra Değer Verenin Anasını sikyim 
+<canvas id="matrix"></canvas>
+
+<div class="terminal">
+  <div class="term-header">
+    <div class="dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+    <div class="title">SUSQUN — SANAL SEKRETER</div>
+    <div style="width:36px"></div>
+  </div>
+  <div class="term-body">
+    <div class="screen" id="screen">
+      <div class="log" id="log"></div>
+      <div class="dialog-btns" id="dialogBtns"></div>
+      <div class="countdown" id="countdown"></div>
+    </div>
   </div>
 </div>
 
 <script>
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() + 365);
-
-  function updateCountdown() {
-    const now = new Date();
-    const diff = targetDate - now;
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    const seconds = Math.floor((diff / 1000) % 60);
-
-    document.getElementById('countdown').innerText = 
-      `${days} Gün ${hours} Saat ${minutes} Dakika ${seconds} Saniye`;
+// MATRIX RAIN
+const canvas=document.getElementById('matrix');
+const ctx=canvas.getContext('2d');
+let w,h,cols,ypos;
+function initMatrix(){
+  w=canvas.width=innerWidth;
+  h=canvas.height=innerHeight;
+  cols=Math.floor(w/14)+1;
+  ypos=new Array(cols).fill(0).map(()=>Math.random()*h);
+  ctx.font='14px monospace';
+}
+function matrixLoop(){
+  ctx.fillStyle='rgba(0,0,0,0.1)';
+  ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='#0f0';
+  for(let i=0;i<cols;i++){
+    const text=String.fromCharCode(0x30A0+Math.random()*96);
+    ctx.fillText(text,i*14,ypos[i]);
+    ypos[i]+=14+Math.random()*10;
+    if(ypos[i]>h+Math.random()*1000) ypos[i]=0;
   }
+}
+initMatrix();
+window.addEventListener('resize',()=>{initMatrix()});
+setInterval(matrixLoop,50);
 
-  updateCountdown();
-  setInterval(updateCountdown, 1000);
+// LOG VE DIALOG
+const logEl=document.getElementById('log');
+const dialogBtns=document.getElementById('dialogBtns');
+const countdownEl=document.getElementById('countdown');
+
+function pushLog(text,speed=6,accent=false){
+  const line=document.createElement('div');line.textContent='';logEl.appendChild(line);
+  let i=0;const t=setInterval(()=>{
+    line.textContent+=text[i++]||'';
+    logEl.scrollTop=logEl.scrollHeight;
+    if(i>=text.length){clearInterval(t);if(accent)line.style.color='#bfffbf';}
+  },speed);
+}
+
+// Yanlış cevap
+function wrongAnswer(){
+  dialogBtns.style.display='none';
+  let countdown=5;
+  countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra kapanacak...`;
+  const interval=setInterval(()=>{
+    countdown--;
+    countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra kapanacak...`;
+    if(countdown<=0){clearInterval(interval);window.close();}
+  },1000);
+}
+
+// Sohbete yönlendirme
+function redirectToChat(){
+  dialogBtns.style.display='none';
+  let countdown=60;
+  countdownEl.textContent=`SusquN ulaşmak için ${countdown} saniye beklemelisin...`;
+  const interval=setInterval(()=>{
+    countdown--;
+    countdownEl.textContent=`SusquN ulaşmak için ${countdown} saniye beklemelisin...`;
+    if(countdown<=0){clearInterval(interval);window.location.href='sohbet.html';}
+  },1000);
+}
+
+// Sorular ve seçenekler
+const questions=[
+  {text:"DEMEK SEN GELDİN, HOŞ GELDİN.\nBANA NEDEN ULAŞMAK İSTİYOSUN!....", options:[{text:"Özledim", correct:true},{text:"Bir işim var senle", correct:true},{text:"Bilmiyorum", correct:false}]},
+  {text:"Benim Zamnım Çok Değerli Biliyosun Değil mi?", options:[{text:"Evet", correct:true},{text:"Hayır", correct:false}]},
+  {text:"Ne kadar özledin?", options:[{text:"Az", correct:false},{text:"Çok", correct:true},{text:"Bilmiyorum", correct:false}]},
+  {text:"Biliyorum sanki zorla doğru cevapları seçtiriyorum. Şu an içinden bana küfür ediyor musun?", options:[{text:"Evet", correct:false},{text:"Hayır", correct:true}]},
+  {text:"Hadi açık konusalım, neden burdasın?", options:[{text:"Sana gerçekten ulaşmam lazım", correct:true},{text:"Cidden bilmiyorum", correct:false}]},
+  {text:"Birine mi ulaşmak istiyorsun yoksa bana ulaşmak için mi geldin?", options:[{text:"Birine", correct:true},{text:"sana ulaşmak", correct:true}]},
+  {text:"Değer görmek istiyorsan değer vermen gerekir, bunu biliyorsun değil mi?", options:[{text:"Evet, biliyorum", correct:true},{text:"Hayır, bilmiyorum", correct:false}]},
+  {text:"Benimle Cidden Konuşman mı Gerek ?", options:[{text:"Evet", correct:true},{text:"Bilmiyorum", correct:false}]},
+];
+
+// AKIŞ
+let currentQ=0;
+
+function showQuestion(){
+  dialogBtns.style.display='flex';
+  countdownEl.textContent='';
+  const q=questions[currentQ];
+  pushLog("\n"+q.text+"\n",6,true);
+  dialogBtns.innerHTML='';
+  q.options.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.textContent=opt.text;
+    btn.onclick=()=>{
+      dialogBtns.innerHTML=''; // eski cevapları sil
+      if(opt.correct){
+        nextQuestion();
+      } else{
+        wrongAnswer();
+      }
+    };
+    dialogBtns.appendChild(btn);
+  });
+}
+
+function nextQuestion(){
+  currentQ++;
+  if(currentQ>=questions.length){
+    pushLog("\nTebrikler! Sohbete yönlendiriliyorsun, beklemen gerekiyor...\n",6,true);
+    redirectToChat();
+  } else{
+    showQuestion();
+  }
+}
+
+// Başlat
+showQuestion();
 </script>
 
 </body>
 </html>
-
