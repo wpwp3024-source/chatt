@@ -77,11 +77,18 @@ const dialogBtns=document.getElementById('dialogBtns');
 const countdownEl=document.getElementById('countdown');
 
 function pushLog(text,speed=6,accent=false){
-  const line=document.createElement('div');line.textContent='';logEl.appendChild(line);
-  let i=0;const t=setInterval(()=>{
+  logEl.innerHTML=''; // Her soru geldiğinde önceki logu temizle
+  const line=document.createElement('div');
+  line.textContent='';
+  logEl.appendChild(line);
+  let i=0;
+  const t=setInterval(()=>{
     line.textContent+=text[i++]||'';
     logEl.scrollTop=logEl.scrollHeight;
-    if(i>=text.length){clearInterval(t);if(accent)line.style.color='#bfffbf';}
+    if(i>=text.length){
+      clearInterval(t);
+      if(accent) line.style.color='#bfffbf';
+    }
   },speed);
 }
 
@@ -89,11 +96,15 @@ function pushLog(text,speed=6,accent=false){
 function wrongAnswer(){
   dialogBtns.style.display='none';
   let countdown=5;
-  countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra kapanacak...`;
+  countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra yönlendirilecek...`;
   const interval=setInterval(()=>{
     countdown--;
-    countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra kapanacak...`;
-    if(countdown<=0){clearInterval(interval);window.close();}
+    countdownEl.textContent=`Yanlış cevap! Sayfa ${countdown} saniye sonra yönlendirilecek...`;
+    if(countdown<=0){
+      clearInterval(interval);
+      // Mobil uyumlu şekilde yönlendirme
+      window.location.href='https://www.google.com';
+    }
   },1000);
 }
 
@@ -105,7 +116,10 @@ function redirectToChat(){
   const interval=setInterval(()=>{
     countdown--;
     countdownEl.textContent=`SusquN ulaşmak için ${countdown} saniye beklemelisin...`;
-    if(countdown<=0){clearInterval(interval);window.location.href='sohbet.html';}
+    if(countdown<=0){
+      clearInterval(interval);
+      window.location.href='sohbet.html';
+    }
   },1000);
 }
 
